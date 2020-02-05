@@ -1,0 +1,81 @@
+using System.Collections.Generic;
+using UnityEngine;
+
+public class MeshCutter : MonoBehaviour
+{
+    public Material meshMat;
+
+    public Vector3[] frontContactPoints { get => GetFrontContactPoints(); }
+    public Vector3[] opositeContactPoinst { get => GetOpositeContactPoins(); }
+    public GameObject[] contactedObjects { get => GetContactedObjects(); }
+
+    private void Start()
+    {
+        GenerateNewMesh(new Vector3[] { new Vector3(0, 0, 0), new Vector3(0, 1, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0) });
+    }
+
+    private GameObject GenerateNewMesh(Vector3[] vertices)
+    {
+        GameObject newMesh = NewMeshGenerator.CreateNewQuad(vertices);
+        ChangeMeshMaterial(newMesh);
+
+        return newMesh;
+    }
+
+    private void ChangeMeshMaterial(GameObject _mesh) => _mesh.GetComponent<MeshRenderer>().material = meshMat;
+
+    public Vector3[] GetFrontContactPoints() => GetHitPoints(Physics.RaycastAll(transform.position, transform.forward, Mathf.Infinity));
+    public Vector3[] GetOpositeContactPoins() => GetHitPoints(Physics.RaycastAll(transform.position + transform.forward * 1000, -transform.forward, Mathf.Infinity));
+
+    public Vector3[] GetHitPoints(RaycastHit[] hits)
+    {
+        Vector3[] contactPoints = new Vector3[hits.Length];
+
+        for (int hit = 0; hit < hits.Length; hit++) contactPoints[hit] = hits[hit].point;
+
+        return contactPoints;
+    }
+
+    public GameObject[] GetContactedObjects()
+    {
+        RaycastHit[] hits = Physics.RaycastAll(transform.position, transform.forward, Mathf.Infinity);
+        GameObject[] objs = new GameObject[hits.Length];
+
+        for (int hit = 0; hit < hits.Length; hit++) objs[hit] = hits[hit].transform.gameObject;
+
+        return objs;
+    }
+
+    private void Update()
+    {      
+        if (Input.GetMouseButtonDown(0)) DivideMeshes();
+    }
+
+    private void DivideMeshes()
+    {
+        foreach (GameObject detectedObj in contactedObjects)
+        {
+            GameObject[] parts = Cut(contactedObjects[0].transform, frontContactPoints[0], opositeContactPoinst[0]);
+            contactedObjects[0].SetActive(false);
+
+            AddRigidbodyToObject(parts[1]);
+        }
+    }    
+
+    private void AddRigidbodyToObject(GameObject _obj) => _obj.AddComponent<Rigidbody>();
+
+    public GameObject[] Cut(Transform _meshToCut, Vector3 _contactPoint, Vector3 _opositeContactPoint)
+    {
+        Mesh originalMesh = _meshToCut.GetComponent<MeshFilter>().mesh;
+
+        List<Vector3> localVerts = new List<Vector3>(originalMesh.vertices);
+        for (int vert = 0; vert < localVerts.Count; vert++) localVerts[vert] = _meshToCut.TransformPoint(localVerts[vert]);
+
+        GameObject[] separatedObjects = new GameObject[2];
+
+        separatedObjects[0] = GenerateNewMesh (new Vector3[] { _contactPoint, localVerts[1], _opositeContactPoint, localVerts[3] });
+        separatedObjects[1] = GenerateNewMesh (new Vector3[] { localVerts[0], _contactPoint, localVerts[2], _opositeContactPoint });
+
+        return separatedObjects;
+    }
+}
