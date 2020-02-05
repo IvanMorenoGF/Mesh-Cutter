@@ -1,0 +1,41 @@
+using UnityEngine;
+
+public static class NewMeshGenerator
+{
+    public static GameObject CreateNewQuad(Vector3[] _vertices)
+    {
+        GameObject generatedObj = GenerateObj();
+        generatedObj.GetComponent<MeshFilter>().mesh = GenerateMesh(_vertices, GenerateQuadTriangles());
+        generatedObj.AddComponent<MeshCollider>();
+        generatedObj.GetComponent<MeshCollider>().convex = true;
+
+        return generatedObj;
+    }
+
+    public static GameObject GenerateObj() => new GameObject("New Obj", typeof(MeshFilter), typeof(MeshRenderer));
+
+    public static Mesh GenerateMesh(Vector3[] _vertices, int[] _triangles)
+    {
+        Mesh tempMesh = new Mesh();
+
+        tempMesh.vertices = _vertices;
+        tempMesh.triangles = _triangles;
+        tempMesh.RecalculateNormals();
+
+        return tempMesh;
+    }
+
+    public static int[] GenerateQuadTriangles()
+    {
+        int[] triangles = new int[6];
+
+        triangles[0] = 1;
+        triangles[1] = 3;
+        triangles[2] = 0;
+        triangles[3] = 3;
+        triangles[4] = 2;
+        triangles[5] = 0;
+
+        return triangles;
+    }
+}
